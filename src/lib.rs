@@ -2,6 +2,8 @@ pub fn add(left: usize, right: usize) -> usize {
     left + right
 }
 
+pub trait Query {}
+
 #[cfg(test)]
 mod tests {
     use bson;
@@ -18,26 +20,30 @@ mod tests {
 
     #[derive(Debug)]
     enum Comparison<T> {
-        Equal(T),
-        NotEqual(T),
-        GreaterThan(T),
-        LessThan(T),
-        GreaterThanOrEqual(T),
-        LessThanOrEqual(T),
+        Eq(T),
+        Ne(T),
+        Gt(T),
+        Gte(T),
+        Lt(T),
+        Lte(T),
+        In(Vec<T>),
+        Nin(Vec<T>),
     }
 
     impl<T: Serialize + Into<bson::Bson>> Comparison<T> {
         fn into_query(self) -> bson::Document {
             let (comparison, value) = match self {
-                Comparison::Equal(value) => ("$eq", value),
-                Comparison::NotEqual(value) => ("$ne", value),
-                Comparison::GreaterThan(value) => ("$gt", value),
-                Comparison::LessThan(value) => ("$lt", value),
-                Comparison::GreaterThanOrEqual(value) => ("$gte", value),
-                Comparison::LessThanOrEqual(value) => ("$lte", value),
+                Comparison::Eq(value) => ("$eq", value),
+                Comparison::Ne(value) => ("$ne", value),
+                Comparison::Gt(value) => ("$gt", value),
+                Comparison::Lt(value) => ("$lt", value),
+                Comparison::Gte(value) => ("$gte", value),
+                Comparison::Lte(value) => ("$lte", value),
+                // Comparison::In(value) => ("$in", value),
+                _ => panic!("Not implemented"),
             };
-
-            bson::doc! { comparison: value }
+            let x = bson::doc! { comparison: value };
+            x
         }
     }
 
@@ -100,9 +106,13 @@ mod tests {
     #[test]
     fn it_works() {
         let student_q = StudentQuery::default()
-            .with_id(Comparison::GreaterThan(1))
-            .with_name(Comparison::Equal("John".to_string()))
-            .with_surname(Comparison::Equal("Doe".to_string()));
+            .with_id(Comparison::Gt(1))
+            .with_name(Comparison::Eq("John".to_string()))
+            .with_surname(Comparison::Eq("Doe".to_string()));
+
+        let query = student_q.into_query();
+
+        let student_q = StudentQuery::default().with_id(Comparison::Gt(1));
 
         let query = student_q.into_query();
         println!("{:?}", query);
