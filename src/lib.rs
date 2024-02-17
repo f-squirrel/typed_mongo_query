@@ -5,7 +5,7 @@ pub mod query {
     use serde::Serialize;
 
     pub trait Query /* : /*Serialize +*/ Into<bson::Bson> */ {
-        fn into_q(self) -> bson::Document;
+        fn to_bson(self) -> bson::Document;
     }
 
     #[derive(Debug, Serialize)]
@@ -22,7 +22,7 @@ pub mod query {
 
     impl<T: Serialize> Query for Comparison<T> {
         // impl<T: Into<bson::Bson>> Query for Comparison<T> {
-        fn into_q(self) -> bson::Document {
+        fn to_bson(self) -> bson::Document {
             let x = match self {
                 Comparison::Eq(value) => bson::doc! { "$eq": bson::ser::to_bson(&value).unwrap() },
                 Comparison::Ne(value) => bson::doc! { "$ne": bson::ser::to_bson(&value).unwrap() },
@@ -43,7 +43,7 @@ pub mod query {
         }
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, Serialize)]
     pub enum Logical<T> {
         And(Vec<T>),
         Not(T),
@@ -53,7 +53,7 @@ pub mod query {
 
     impl<T: Serialize> Query for Logical<T> {
         // impl<T: Into<bson::Bson>> Query for Logical<T> {
-        fn into_q(self) -> bson::Document {
+        fn to_bson(self) -> bson::Document {
             let x = match self {
                 Logical::And(value) => bson::doc! { "$and": bson::ser::to_bson(&value).unwrap() },
                 Logical::Not(value) => bson::doc! { "$not": bson::ser::to_bson(&value).unwrap() },
@@ -91,26 +91,26 @@ mod tests {
     }
 
     impl Query for StudentQuery {
-        fn into_q(self) -> bson::Document {
+        fn to_bson(self) -> bson::Document {
             let mut query = bson::doc! {};
 
             match self.id {
                 Some(id) => {
-                    query.insert("id", id.into_q());
+                    query.insert("id", id.to_bson());
                 }
                 None => {}
             }
 
             match self.name {
                 Some(name) => {
-                    query.insert("name", name.into_q());
+                    query.insert("name", name.to_bson());
                 }
                 None => {}
             }
 
             match self.surname {
                 Some(surname) => {
-                    query.insert("surname", surname.into_q());
+                    query.insert("surname", surname.to_bson());
                 }
                 None => {}
             }
@@ -148,18 +148,18 @@ mod tests {
             .with_name(Comparison::Eq("John".to_string()))
             .with_surname(Comparison::Eq("Doe".to_string()));
 
-        let query = student_q.into_q();
+        let query = student_q.to_bson();
         println!("{:?}", query);
 
         let student_q = StudentQuery::default().with_id(Comparison::Gt(1));
 
-        let query = student_q.into_q();
+        let query = student_q.to_bson();
         println!("{:?}", query);
 
         let student_id = StudentQuery::default().with_id(Comparison::Gt(1));
         let student_name = StudentQuery::default().with_name(Comparison::Eq("John".to_string()));
-        let or = Logical::Or(vec![student_id.into_q(), student_name.into_q()]);
-        let query = or.into_q();
+        let or = Logical::Or(vec![student_id, student_name]);
+        let query = or.to_bson();
         println!("{:?}", query);
     }
 
@@ -172,17 +172,16 @@ mod tests {
 
         #[derive(Debug, Serialize)]
         struct ClassQuery {
-            // students: Option<Logical<StudentQuery>>,
-            students: Option<Comparison<StudentQuery>>,
+            students: Option<Logical<StudentQuery>>,
         }
 
         impl Query for ClassQuery {
-            fn into_q(self) -> bson::Document {
+            fn to_bson(self) -> bson::Document {
                 let mut query = bson::doc! {};
 
                 match self.students {
                     Some(students) => {
-                        query.insert("students", students.into_q());
+                        query.insert("students", students.to_bson());
                     }
                     None => {}
                 }
@@ -191,16 +190,12 @@ mod tests {
             }
         }
 
-        // impl Into<bson::Bson> for Comparison<StudentQuery> {
-        //     fn into(self) -> bson::Bson {
-        //         match self {
-        //             Comparison::Eq(value) => bson::Bson::from(value),
-        //             Comparison::Gt(value) => bson::Bson::from(value),
-        //             Comparison::Lt(value) => bson::Bson::from(value),
-        //             _ => panic!("saaa");
-        //             // Add more variants if necessary
-        //         }
-        //     }
-        // }
+        let class_q = ClassQuery {
+            students: Some(Logical::Or(vec![
+                StudentQuery::default().with_id(Comparison::Gt(1)),
+                StudentQuery::default().with_name(Comparison::Eq("John".to_string())),
+            ])),
+        };
+        println!("{:?}", class_q.to_bson());
     }
 }
