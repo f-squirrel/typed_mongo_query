@@ -113,7 +113,9 @@ mod tests {
 
     #[derive(Debug, Default, Serialize, Deserialize)]
     struct Student {
+        // #[mongo_q(query, index)]
         id: u32,
+        // #[mongo_q(query)]
         name: String,
         surname: String,
     }
@@ -332,5 +334,57 @@ mod tests {
 
         let student_q = StudentQuery::default().with_id(Comparison::Gt(1));
         delete_document(student_q);
+    }
+
+    #[test]
+    fn test_determenistic_order() {
+        #[derive(Debug, Serialize, Deserialize, Default)]
+        struct BlockNumber(i64);
+
+        #[derive(Debug, Serialize, Deserialize, Default)]
+        struct Block {
+            number: BlockNumber,
+            hash: Option<String>,
+        }
+
+        #[derive(Debug, Serialize, Default)]
+        struct BlockQuery {
+            number: Option<Comparison<BlockNumber>>,
+            hash: Option<Comparison<Option<String>>>,
+        }
+
+        impl Parameter for BlockQuery {
+            fn to_bson(self) -> bson::Document {
+                let mut query = bson::doc! {};
+
+                match self.number {
+                    Some(block_number) => {
+                        query.insert("number", block_number.to_bson());
+                    }
+                    None => {}
+                }
+
+                match self.hash {
+                    Some(hash) => {
+                        query.insert("hash", hash.to_bson());
+                    }
+                    None => {}
+                }
+
+                query
+            }
+        }
+
+        let q1 = BlockQuery {
+            number: Some(Comparison::Gt(BlockNumber(1))),
+            hash: Some(Comparison::Eq(Some("0x123".to_string()))),
+        };
+
+        let q2 = BlockQuery {
+            hash: Some(Comparison::Eq(Some("0x123".to_string()))),
+            number: Some(Comparison::Gt(BlockNumber(1))),
+        };
+
+        assert_eq!(q1.to_bson().to_string(), q2.to_bson().to_string());
     }
 }
