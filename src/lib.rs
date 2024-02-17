@@ -4,7 +4,7 @@ pub mod query {
     use bson;
     use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-    pub trait Parameter /* : /*Serialize +*/ Into<bson::Bson> */ {
+    pub trait Parameter {
         fn to_bson(self) -> bson::Document;
     }
 
@@ -46,10 +46,14 @@ pub mod query {
         }
     }
 
+    impl<T: Document + crate::Serialize> Document for Comparison<T> {
+        type ResponseDocument = T::ResponseDocument;
+    }
+
     #[derive(Debug, Serialize)]
     pub enum Logical<T> {
-        And(Vec<T>),
         Not(T),
+        And(Vec<T>),
         Or(Vec<T>),
         Nor(Vec<T>),
     }
@@ -61,6 +65,26 @@ pub mod query {
                 Logical::Not(value) => bson::doc! { "$not": bson::ser::to_bson(&value).unwrap() },
                 Logical::Or(value) => bson::doc! { "$or": bson::ser::to_bson(&value).unwrap() },
                 Logical::Nor(value) => bson::doc! { "$nor": bson::ser::to_bson(&value).unwrap() },
+            };
+            x
+        }
+    }
+
+    impl<T: Document + crate::Serialize> Document for Logical<T> {
+        type ResponseDocument = T::ResponseDocument;
+    }
+
+    #[derive(Debug, Serialize)]
+    pub enum LogicalParameter<T> {
+        Value(T),
+        Logical(Logical<T>),
+    }
+
+    impl<T: Serialize> Parameter for LogicalParameter<T> {
+        fn to_bson(self) -> bson::Document {
+            let x = match self {
+                LogicalParameter::Logical(value) => value.to_bson(),
+                LogicalParameter::Value(value) => bson::ser::to_bson(&value).unwrap().as_document().unwrap().clone(),
             };
             x
         }
@@ -248,5 +272,25 @@ mod tests {
         };
 
         query_document(class_q);
+
+        // let class_q = ClassQuery {
+        //     students: Some(Logical::And(vec![
+        //         StudentQuery::default().with_id(Comparison::Gt(5)),
+        //         Logical::Or(vec![
+        //             StudentQuery::default().with_id(Comparison::Gt(1)),
+        //             StudentQuery::default().with_name(Comparison::Eq("John".to_string())),
+        //         ]),
+        //     ])),
+        // };
+
+        let student_id = StudentQuery::default().with_id(Comparison::Gt(1));
+        let student_name = StudentQuery::default().with_name(Comparison::Eq("John".to_string()));
+        let or = Logical::Or(vec![student_id, student_name]);
+        let _x = query_document(or);
+
+        let student_id = StudentQuery::default().with_id(Comparison::Gt(1));
+        let student_name = StudentQuery::default().with_name(Comparison::Eq("John".to_string()));
+        let and = Logical::And(vec![student_id, student_name]);
+        let _x = query_document(and);
     }
 }
