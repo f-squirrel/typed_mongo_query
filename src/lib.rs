@@ -2,10 +2,14 @@ use serde::Serialize;
 
 pub mod query {
     use bson;
-    use serde::Serialize;
+    use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-    pub trait Query /* : /*Serialize +*/ Into<bson::Bson> */ {
+    pub trait Parameter /* : /*Serialize +*/ Into<bson::Bson> */ {
         fn to_bson(self) -> bson::Document;
+    }
+
+    pub trait Document: Parameter {
+        type ResponseDocument: DeserializeOwned;
     }
 
     #[derive(Debug, Serialize)]
@@ -20,8 +24,7 @@ pub mod query {
         Nin(Vec<T>),
     }
 
-    impl<T: Serialize> Query for Comparison<T> {
-        // impl<T: Into<bson::Bson>> Query for Comparison<T> {
+    impl<T: Serialize> Parameter for Comparison<T> {
         fn to_bson(self) -> bson::Document {
             let x = match self {
                 Comparison::Eq(value) => bson::doc! { "$eq": bson::ser::to_bson(&value).unwrap() },
@@ -51,8 +54,7 @@ pub mod query {
         Nor(Vec<T>),
     }
 
-    impl<T: Serialize> Query for Logical<T> {
-        // impl<T: Into<bson::Bson>> Query for Logical<T> {
+    impl<T: Serialize> Parameter for Logical<T> {
         fn to_bson(self) -> bson::Document {
             let x = match self {
                 Logical::And(value) => bson::doc! { "$and": bson::ser::to_bson(&value).unwrap() },
@@ -72,11 +74,13 @@ mod tests {
     use query::Logical;
     use serde::{Deserialize, Serialize};
 
-    use self::query::Query;
+    use crate::query::Document;
+
+    use self::query::Parameter;
 
     use super::*;
 
-    #[derive(Debug, Serialize, Deserialize)]
+    #[derive(Debug, Default, Serialize, Deserialize)]
     struct Student {
         id: u32,
         name: String,
@@ -90,7 +94,7 @@ mod tests {
         surname: Option<Comparison<String>>,
     }
 
-    impl Query for StudentQuery {
+    impl Parameter for StudentQuery {
         fn to_bson(self) -> bson::Document {
             let mut query = bson::doc! {};
 
@@ -119,6 +123,10 @@ mod tests {
         }
     }
 
+    impl Document for StudentQuery {
+        type ResponseDocument = Student;
+    }
+
     impl StudentQuery {
         pub fn with_id(self, id: Comparison<u32>) -> Self {
             Self {
@@ -139,6 +147,35 @@ mod tests {
                 ..self
             }
         }
+    }
+
+    #[derive(Debug, Serialize, Deserialize, Default)]
+    struct Class {
+        students: Vec<Student>,
+    }
+
+    #[derive(Debug, Serialize, Default)]
+    struct ClassQuery {
+        students: Option<Logical<StudentQuery>>,
+    }
+
+    impl Parameter for ClassQuery {
+        fn to_bson(self) -> bson::Document {
+            let mut query = bson::doc! {};
+
+            match self.students {
+                Some(students) => {
+                    query.insert("students", students.to_bson());
+                }
+                None => {}
+            }
+
+            query
+        }
+    }
+
+    impl Document for ClassQuery {
+        type ResponseDocument = Class;
     }
 
     #[test]
@@ -165,31 +202,6 @@ mod tests {
 
     #[test]
     fn test_vec_of_students() {
-        #[derive(Debug, Serialize)]
-        struct Class {
-            students: Vec<Student>,
-        }
-
-        #[derive(Debug, Serialize)]
-        struct ClassQuery {
-            students: Option<Logical<StudentQuery>>,
-        }
-
-        impl Query for ClassQuery {
-            fn to_bson(self) -> bson::Document {
-                let mut query = bson::doc! {};
-
-                match self.students {
-                    Some(students) => {
-                        query.insert("students", students.to_bson());
-                    }
-                    None => {}
-                }
-
-                query
-            }
-        }
-
         let class_q = ClassQuery {
             students: Some(Logical::Or(vec![
                 StudentQuery::default().with_id(Comparison::Gt(1)),
@@ -197,5 +209,44 @@ mod tests {
             ])),
         };
         println!("{:?}", class_q.to_bson());
+    }
+
+    #[test]
+    fn test_fn_receive_q() {
+        // how to add result?
+        fn foo<T: Parameter>(q: T) {
+            println!("{:?}", q.to_bson());
+        }
+        let student_q = StudentQuery::default().with_id(Comparison::Gt(1));
+        foo(student_q);
+    }
+
+    #[test]
+    fn test_fn_receive_q_return_doc() {
+        // how to add result?
+        fn query_document<T>(q: T) -> T::ResponseDocument
+        where
+            T: Document,
+            // Only for tests
+            T::ResponseDocument: Default + Serialize,
+        {
+            let _query = q.to_bson();
+            let response = T::ResponseDocument::default();
+            let d = bson::ser::to_document(&response).unwrap();
+
+            bson::from_document(d).unwrap()
+        }
+
+        let student_q = StudentQuery::default().with_id(Comparison::Gt(1));
+        query_document(student_q);
+
+        let class_q = ClassQuery {
+            students: Some(Logical::Or(vec![
+                StudentQuery::default().with_id(Comparison::Gt(1)),
+                StudentQuery::default().with_name(Comparison::Eq("John".to_string())),
+            ])),
+        };
+
+        query_document(class_q);
     }
 }
