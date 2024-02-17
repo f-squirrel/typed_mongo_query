@@ -20,33 +20,24 @@ pub mod query {
         Nin(Vec<T>),
     }
 
-    impl<T: Into<bson::Bson>> Comparison<T> {
-        pub fn into_query(self) -> bson::Document {
-            let x = match self {
-                Comparison::Eq(value) => bson::doc! { "$eq": value },
-                Comparison::Ne(value) => bson::doc! { "$ne": value },
-                Comparison::Gt(value) => bson::doc! { "$gt": value },
-                Comparison::Lt(value) => bson::doc! { "$lt": value },
-                Comparison::Gte(value) => bson::doc! {"$gte": value},
-                Comparison::Lte(value) => bson::doc! {"$lte": value},
-                Comparison::In(value) => bson::doc! { "$in": value },
-                Comparison::Nin(value) => bson::doc! { "$nin": value },
-            };
-            x
-        }
-    }
-
-    impl<T: Into<bson::Bson>> Query for Comparison<T> {
+    impl<T: Serialize> Query for Comparison<T> {
+        // impl<T: Into<bson::Bson>> Query for Comparison<T> {
         fn into_q(self) -> bson::Document {
             let x = match self {
-                Comparison::Eq(value) => bson::doc! { "$eq": value },
-                Comparison::Ne(value) => bson::doc! { "$ne": value },
-                Comparison::Gt(value) => bson::doc! { "$gt": value },
-                Comparison::Lt(value) => bson::doc! { "$lt": value },
-                Comparison::Gte(value) => bson::doc! {"$gte": value},
-                Comparison::Lte(value) => bson::doc! {"$lte": value},
-                Comparison::In(value) => bson::doc! { "$in": value },
-                Comparison::Nin(value) => bson::doc! { "$nin": value },
+                Comparison::Eq(value) => bson::doc! { "$eq": bson::ser::to_bson(&value).unwrap() },
+                Comparison::Ne(value) => bson::doc! { "$ne": bson::ser::to_bson(&value).unwrap() },
+                Comparison::Gt(value) => bson::doc! { "$gt": bson::ser::to_bson(&value).unwrap() },
+                Comparison::Lt(value) => bson::doc! { "$lt": bson::ser::to_bson(&value).unwrap() },
+                Comparison::Gte(value) => {
+                    bson::doc! { "$gte": bson::ser::to_bson(&value).unwrap() }
+                }
+                Comparison::Lte(value) => {
+                    bson::doc! { "$lte": bson::ser::to_bson(&value).unwrap() }
+                }
+                Comparison::In(value) => bson::doc! { "$in": bson::ser::to_bson(&value).unwrap() },
+                Comparison::Nin(value) => {
+                    bson::doc! { "$nin": bson::ser::to_bson(&value).unwrap() }
+                }
             };
             x
         }
@@ -60,25 +51,14 @@ pub mod query {
         Nor(Vec<T>),
     }
 
-    impl<T: Serialize + Into<bson::Bson>> Logical<T> {
-        pub fn into_query(self) -> bson::Document {
-            let x = match self {
-                Logical::And(value) => bson::doc! { "$and": value },
-                Logical::Not(value) => bson::doc! { "$not": value },
-                Logical::Or(value) => bson::doc! { "$or": value },
-                Logical::Nor(value) => bson::doc! { "$nor": value },
-            };
-            x
-        }
-    }
-
-    impl<T: Into<bson::Bson>> Query for Logical<T> {
+    impl<T: Serialize> Query for Logical<T> {
+        // impl<T: Into<bson::Bson>> Query for Logical<T> {
         fn into_q(self) -> bson::Document {
             let x = match self {
-                Logical::And(value) => bson::doc! { "$and": value },
-                Logical::Not(value) => bson::doc! { "$not": value },
-                Logical::Or(value) => bson::doc! { "$or": value },
-                Logical::Nor(value) => bson::doc! { "$nor": value },
+                Logical::And(value) => bson::doc! { "$and": bson::ser::to_bson(&value).unwrap() },
+                Logical::Not(value) => bson::doc! { "$not": bson::ser::to_bson(&value).unwrap() },
+                Logical::Or(value) => bson::doc! { "$or": bson::ser::to_bson(&value).unwrap() },
+                Logical::Nor(value) => bson::doc! { "$nor": bson::ser::to_bson(&value).unwrap() },
             };
             x
         }
@@ -103,7 +83,7 @@ mod tests {
         surname: String,
     }
 
-    #[derive(Debug, Default)]
+    #[derive(Debug, Default, Serialize)]
     struct StudentQuery {
         id: Option<Comparison<u32>>,
         name: Option<Comparison<String>>,
@@ -116,21 +96,21 @@ mod tests {
 
             match self.id {
                 Some(id) => {
-                    query.insert("id", id.into_query());
+                    query.insert("id", id.into_q());
                 }
                 None => {}
             }
 
             match self.name {
                 Some(name) => {
-                    query.insert("name", name.into_query());
+                    query.insert("name", name.into_q());
                 }
                 None => {}
             }
 
             match self.surname {
                 Some(surname) => {
-                    query.insert("surname", surname.into_query());
+                    query.insert("surname", surname.into_q());
                 }
                 None => {}
             }
@@ -181,5 +161,46 @@ mod tests {
         let or = Logical::Or(vec![student_id.into_q(), student_name.into_q()]);
         let query = or.into_q();
         println!("{:?}", query);
+    }
+
+    #[test]
+    fn test_vec_of_students() {
+        #[derive(Debug, Serialize)]
+        struct Class {
+            students: Vec<Student>,
+        }
+
+        #[derive(Debug, Serialize)]
+        struct ClassQuery {
+            // students: Option<Logical<StudentQuery>>,
+            students: Option<Comparison<StudentQuery>>,
+        }
+
+        impl Query for ClassQuery {
+            fn into_q(self) -> bson::Document {
+                let mut query = bson::doc! {};
+
+                match self.students {
+                    Some(students) => {
+                        query.insert("students", students.into_q());
+                    }
+                    None => {}
+                }
+
+                query
+            }
+        }
+
+        // impl Into<bson::Bson> for Comparison<StudentQuery> {
+        //     fn into(self) -> bson::Bson {
+        //         match self {
+        //             Comparison::Eq(value) => bson::Bson::from(value),
+        //             Comparison::Gt(value) => bson::Bson::from(value),
+        //             Comparison::Lt(value) => bson::Bson::from(value),
+        //             _ => panic!("saaa");
+        //             // Add more variants if necessary
+        //         }
+        //     }
+        // }
     }
 }
