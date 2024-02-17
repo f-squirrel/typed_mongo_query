@@ -9,7 +9,7 @@ pub mod query {
     }
 
     pub trait Document: Parameter {
-        type ResponseDocument: DeserializeOwned;
+        type ResponseDocument; /* : DeserializeOwned*/
     }
 
     #[derive(Debug, Serialize)]
@@ -101,6 +101,7 @@ mod tests {
     use bson;
     use query::Comparison;
     use query::Logical;
+    use serde::de::DeserializeOwned;
     use serde::{Deserialize, Serialize};
 
     use crate::query::Document;
@@ -263,7 +264,7 @@ mod tests {
         where
             T: Document,
             // Only for tests
-            T::ResponseDocument: Default + Serialize,
+            T::ResponseDocument: Default + Serialize + DeserializeOwned,
         {
             let _query = q.to_bson();
             println!("{:?}", _query);
@@ -316,5 +317,20 @@ mod tests {
         };
 
         query_document(class_q);
+    }
+
+    #[test]
+    fn test_fn_delete_doc() {
+        // how to add result?
+        fn delete_document<T>(q: T)
+        where
+            T: Document,
+        {
+            let _query = q.to_bson();
+            println!("{:?}", _query);
+        }
+
+        let student_q = StudentQuery::default().with_id(Comparison::Gt(1));
+        delete_document(student_q);
     }
 }
