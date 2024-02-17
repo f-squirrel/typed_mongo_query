@@ -304,10 +304,10 @@ mod tests {
         let _x = query_document(and);
 
         let class_q = ClassQuery {
-            students: Some(Logical::And(vec![
+            students: Some(Logical::Or(vec![
                 LogicalParameter::Value(StudentQuery::default().with_id(Comparison::Gt(5))),
-                LogicalParameter::Logical(Logical::Or(vec![
-                    LogicalParameter::Value(StudentQuery::default().with_id(Comparison::Gt(1))),
+                LogicalParameter::Logical(Logical::And(vec![
+                    LogicalParameter::Value(StudentQuery::default().with_id(Comparison::Eq(1))),
                     LogicalParameter::Value(
                         StudentQuery::default().with_name(Comparison::Eq("John".to_string())),
                     ),
