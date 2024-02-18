@@ -2,7 +2,7 @@ use serde::Serialize;
 
 pub mod query {
     use bson;
-    use serde::{de::DeserializeOwned, Deserialize, Serialize};
+    use serde::Serialize;
 
     pub trait Parameter {
         fn to_bson(self) -> bson::Document;
