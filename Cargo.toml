@@ -1,4 +1,4 @@
 [workspace]
 resolver = "2"
 
-members = [ "macro_test","typed_mongo_query", "typed_mongo_query_macro"]
+members = ["macro_test", "mongo_tq", "mongo_tq_macro"]

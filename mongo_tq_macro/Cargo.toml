@@ -1,5 +1,5 @@
 [package]
-name = "typed_mongo_query_macro"
+name = "mongo_tq_macro"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,7 +8,7 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
-typed_mongo_query = { path = "../typed_mongo_query" }
+mongo_tq = { path = "../mongo_tq" }
 
 syn = { version = "1.0", features = ["full"] }
 quote = "1.0"

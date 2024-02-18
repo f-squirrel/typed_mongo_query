@@ -151,8 +151,26 @@ checksum = "b5e6163cb8c49088c2c36f57875e58ccd8c87c7427f7fbd50ea6710b2f3f2e8f"
 name = "macro_test"
 version = "0.1.0"
 dependencies = [
- "typed_mongo_query",
- "typed_mongo_query_macro",
+ "mongo_tq",
+ "mongo_tq_macro",
+]
+
+[[package]]
+name = "mongo_tq"
+version = "0.1.0"
+dependencies = [
+ "bson",
+ "serde",
+]
+
+[[package]]
+name = "mongo_tq_macro"
+version = "0.1.0"
+dependencies = [
+ "mongo_tq",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -337,24 +355,6 @@ checksum = "7ba3a3ef41e6672a2f0f001392bb5dcd3ff0a9992d618ca761a11c3121547774"
 dependencies = [
  "num-conv",
  "time-core",
-]
-
-[[package]]
-name = "typed_mongo_query"
-version = "0.1.0"
-dependencies = [
- "bson",
- "serde",
-]
-
-[[package]]
-name = "typed_mongo_query_macro"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
- "typed_mongo_query",
 ]
 
 [[package]]

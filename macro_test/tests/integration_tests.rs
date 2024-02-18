@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
 
-    use typed_mongo_query_macro::Queriable;
+    use mongo_tq_macro::Queriable;
     fn test_basic_struct() {
         let input = r#"
             #[derive(Queriable)]

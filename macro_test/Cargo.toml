@@ -6,5 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-typed_mongo_query_macro = { path = "../typed_mongo_query_macro" }
-typed_mongo_query = { path = "../typed_mongo_query" }
+mongo_tq_macro = { path = "../mongo_tq_macro" }
+mongo_tq = { path = "../mongo_tq" }

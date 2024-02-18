@@ -1,5 +1,5 @@
 [package]
-name = "typed_mongo_query"
+name = "mongo_tq"
 version = "0.1.0"
 edition = "2021"
 
