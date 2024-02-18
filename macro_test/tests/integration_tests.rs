@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod tests {
 
-    use mongo_tq_macro::Queriable;
+    use mongo_tq_macro::Queryable;
     fn test_basic_struct() {
         let input = r#"
-            #[derive(Queriable)]
+            #[derive(Queryable)]
             struct Test {
                 id: i32,
                 name: String,

@@ -5,8 +5,8 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput, Field};
 
-#[proc_macro_derive(Queriable, attributes(mongo_strict_query))]
-pub fn queriable_derive(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(Queryable, attributes(mongo_strict_query))]
+pub fn queryable_derive(input: TokenStream) -> TokenStream {
     // Parse the input tokens into a syntax tree
     let input = parse_macro_input!(input as DeriveInput);
 
