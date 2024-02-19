@@ -10,16 +10,16 @@ mod tests {
     fn test_basic_struct() {
         #[derive(Queryable)]
         struct Student {
+            #[mongo_tq(cmp)]
             id: i32,
+            #[mongo_tq(cmp)]
             name: String,
             age: i32,
         }
 
-        let _query = StudentQuery {
-            id: Some(Comparison::Eq(1)),
-            name: None,
-            age: None,
-        };
+        let _query = StudentQuery::all()
+            .with_id(Comparison::Eq(1))
+            .with_name(Comparison::Eq("John".to_string()));
 
         // let raw_q = _query.to_bson();
     }
