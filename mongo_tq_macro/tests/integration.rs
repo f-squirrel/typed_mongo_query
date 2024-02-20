@@ -21,6 +21,7 @@ mod tests {
             .with_id(Comparison::Eq(1))
             .with_name(Comparison::Eq("John".to_string()));
 
-        // let raw_q = _query.to_bson();
+        let raw_q = _query.to_bson();
+        println!("{:?}", raw_q);
     }
 }

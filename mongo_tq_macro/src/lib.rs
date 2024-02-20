@@ -1,10 +1,9 @@
 extern crate proc_macro;
 extern crate syn;
 
-use mongo_tq::query;
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, spanned::Spanned, DeriveInput, Field};
+use syn::{parse_macro_input, DeriveInput, Field};
 
 #[proc_macro_derive(Queryable, attributes(mongo_tq))]
 pub fn queryable_derive(input: TokenStream) -> TokenStream {
@@ -15,6 +14,7 @@ pub fn queryable_derive(input: TokenStream) -> TokenStream {
     let mut query_fields = Vec::new();
     let mut with_methods = Vec::new();
     let mut field_initializers = Vec::new();
+    let mut query_build = Vec::new();
 
     // Extract the struct's name and fields
     let name = input.ident;
@@ -26,7 +26,12 @@ pub fn queryable_derive(input: TokenStream) -> TokenStream {
         unimplemented!()
     };
 
+    // TODO:
+    // 1. relate to serde rename, rename_all, etc.
+
+    let mut v = Vec::<Field>::new();
     for field in fields {
+        v.push(field.clone());
         if let Some(ident) = &field.ident {
             let mongo_tq_attr = field
                 .attrs
@@ -39,6 +44,7 @@ pub fn queryable_derive(input: TokenStream) -> TokenStream {
             query_fields.push(quote! { #ident: Option<Comparison<#ty>>, });
             field_initializers.push(quote! { #ident: None });
 
+            // Build the `with_` methods
             let method_name = syn::Ident::new(&format!("with_{}", ident), ident.span());
             with_methods.push(quote! {
                 pub fn #method_name(mut self, value: Comparison<#ty>) -> Self {
@@ -46,6 +52,13 @@ pub fn queryable_derive(input: TokenStream) -> TokenStream {
                     self
                 }
             });
+
+            // Build the query
+            query_build.push(quote! {
+                if let Some(value) = self.#ident {
+                    query.insert(stringify!(#ident), value.to_bson());
+                }
+            })
         }
     }
 
@@ -70,8 +83,22 @@ pub fn queryable_derive(input: TokenStream) -> TokenStream {
             #(#with_methods)*
         }
 
-        // Implement `Parameter` and `Document` traits for `#query_struct_name`
-        // ...
+
+        impl Parameter for #query_struct_name {
+            fn to_bson(self) -> mongo_tq::bson::Document {
+                let mut query = mongo_tq::bson::doc! {};
+
+                #(#query_build)*
+
+                query
+            }
+        }
+
+
+        impl Document for #query_struct_name {
+            type ResponseDocument = #name;
+        }
+
     };
 
     // Hand the output tokens back to the compiler
