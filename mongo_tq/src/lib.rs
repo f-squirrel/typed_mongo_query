@@ -8,7 +8,7 @@ pub mod query {
     use serde::Serialize;
 
     pub trait Parameter {
-        fn to_bson(self) -> bson::Document;
+        fn to_bson(self) -> bson::Bson;
     }
 
     pub trait Document: Parameter {
@@ -28,7 +28,7 @@ pub mod query {
     }
 
     impl<T: Serialize> Parameter for Comparison<T> {
-        fn to_bson(self) -> bson::Document {
+        fn to_bson(self) -> bson::Bson {
             let x = match self {
                 Comparison::Eq(value) => bson::doc! { "$eq": bson::ser::to_bson(&value).unwrap() },
                 Comparison::Ne(value) => bson::doc! { "$ne": bson::ser::to_bson(&value).unwrap() },
@@ -45,7 +45,7 @@ pub mod query {
                     bson::doc! { "$nin": bson::ser::to_bson(&value).unwrap() }
                 }
             };
-            x
+            bson::Bson::Document(x)
         }
     }
 
@@ -62,14 +62,14 @@ pub mod query {
     }
 
     impl<T: Serialize> Parameter for Logical<T> {
-        fn to_bson(self) -> bson::Document {
+        fn to_bson(self) -> bson::Bson {
             let x = match self {
                 Logical::And(value) => bson::doc! { "$and": bson::ser::to_bson(&value).unwrap() },
                 Logical::Not(value) => bson::doc! { "$not": bson::ser::to_bson(&value).unwrap() },
                 Logical::Or(value) => bson::doc! { "$or": bson::ser::to_bson(&value).unwrap() },
                 Logical::Nor(value) => bson::doc! { "$nor": bson::ser::to_bson(&value).unwrap() },
             };
-            x
+            bson::Bson::Document(x)
         }
     }
 
@@ -85,13 +85,13 @@ pub mod query {
     }
 
     impl<T: Serialize> Parameter for LogicalParameter<T> {
-        fn to_bson(self) -> bson::Document {
+        fn to_bson(self) -> bson::Bson {
             let x = match self {
                 LogicalParameter::Logical(value) => value.to_bson(),
                 LogicalParameter::Value(value) => bson::ser::to_bson(&value)
                     .unwrap()
-                    .as_document()
-                    .unwrap()
+                    // .as_document()
+                    // .unwrap()
                     .clone(),
             };
             x
@@ -131,7 +131,7 @@ mod tests {
     }
 
     impl Parameter for StudentQuery {
-        fn to_bson(self) -> bson::Document {
+        fn to_bson(self) -> bson::Bson {
             let mut query = bson::doc! {};
 
             match self.id {
@@ -155,7 +155,7 @@ mod tests {
                 None => {}
             }
 
-            query
+            bson::Bson::Document(query)
         }
     }
 
@@ -196,7 +196,7 @@ mod tests {
     }
 
     impl Parameter for ClassQuery {
-        fn to_bson(self) -> bson::Document {
+        fn to_bson(self) -> bson::Bson {
             let mut query = bson::doc! {};
 
             match self.students {
@@ -206,7 +206,7 @@ mod tests {
                 None => {}
             }
 
-            query
+            bson::Bson::Document(query)
         }
     }
 
@@ -357,7 +357,7 @@ mod tests {
         }
 
         impl Parameter for BlockQuery {
-            fn to_bson(self) -> bson::Document {
+            fn to_bson(self) -> bson::Bson {
                 let mut query = bson::doc! {};
 
                 match self.number {
@@ -374,7 +374,7 @@ mod tests {
                     None => {}
                 }
 
-                query
+                bson::Bson::Document(query)
             }
         }
 

@@ -87,12 +87,12 @@ pub fn queryable_derive(input: TokenStream) -> TokenStream {
 
 
         impl Parameter for #query_struct_name {
-            fn to_bson(self) -> mongo_tq::bson::Document {
+            fn to_bson(self) -> mongo_tq::bson::Bson {
                 let mut query = mongo_tq::bson::doc! {};
 
                 #(#query_build)*
 
-                query
+                mongo_tq::bson::Bson::Document(query)
             }
         }
 
