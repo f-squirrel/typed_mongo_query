@@ -1,6 +1,7 @@
 use serde::Serialize;
 
 pub use bson;
+pub use serde;
 
 pub mod query {
     use bson;

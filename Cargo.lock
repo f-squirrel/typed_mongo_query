@@ -162,6 +162,7 @@ dependencies = [
  "mongo_tq",
  "proc-macro2",
  "quote",
+ "serde",
  "syn 1.0.109",
 ]
 
