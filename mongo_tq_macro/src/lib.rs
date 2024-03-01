@@ -41,6 +41,7 @@ pub fn queryable_derive(input: TokenStream) -> TokenStream {
                 continue;
             }
             let ty = &field.ty;
+
             query_fields.push(quote! { #ident: Option<Comparison<#ty>>, });
             field_initializers.push(quote! { #ident: None });
 

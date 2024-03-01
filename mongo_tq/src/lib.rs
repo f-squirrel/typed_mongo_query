@@ -11,6 +11,21 @@ pub mod query {
         fn to_bson(self) -> bson::Bson;
     }
 
+    #[macro_export]
+    macro_rules! impl_parameter {
+    ( $( $t:ty ),* ) => {
+        $(
+            impl Parameter for $t {
+                fn to_bson(self) -> bson::Bson {
+                    self.into()
+                }
+            }
+        )*
+    };
+}
+
+    impl_parameter!(String, i32, i64, f64);
+
     pub trait Document: Parameter {
         type ResponseDocument; /* : DeserializeOwned*/
     }
@@ -61,13 +76,23 @@ pub mod query {
         Nor(Vec<LogicalParameter<T>>),
     }
 
-    impl<T: Serialize> Parameter for Logical<T> {
+    impl<T: Parameter> Parameter for Logical<T> {
+        // impl<T: Serialize> Parameter for Logical<T> {
         fn to_bson(self) -> bson::Bson {
             let x = match self {
-                Logical::And(value) => bson::doc! { "$and": bson::ser::to_bson(&value).unwrap() },
-                Logical::Not(value) => bson::doc! { "$not": bson::ser::to_bson(&value).unwrap() },
-                Logical::Or(value) => bson::doc! { "$or": bson::ser::to_bson(&value).unwrap() },
-                Logical::Nor(value) => bson::doc! { "$nor": bson::ser::to_bson(&value).unwrap() },
+                Logical::And(value) => {
+                    bson::doc! { "$and": value.into_iter().map(|x| x.to_bson()).collect::<Vec<_>>() }
+                }
+                Logical::Not(value) => bson::doc! { "$not": value.to_bson() },
+                Logical::Or(value) => {
+                    bson::doc! { "$or": value.into_iter().map(|x| x.to_bson()).collect::<Vec<_>>() }
+                }
+                Logical::Nor(value) => {
+                    bson::doc! { "$nor": value.into_iter().map(|x| x.to_bson()).collect::<Vec<_>>() }
+                } // Logical::And(value) => bson::doc! { "$and": bson::ser::to_bson(&value).unwrap() },
+                  // Logical::Not(value) => bson::doc! { "$not": bson::ser::to_bson(&value).unwrap() },
+                  // Logical::Or(value) => bson::doc! { "$or": bson::ser::to_bson(&value).unwrap() },
+                  // Logical::Nor(value) => bson::doc! { "$nor": bson::ser::to_bson(&value).unwrap() },
             };
             bson::Bson::Document(x)
         }
@@ -84,15 +109,14 @@ pub mod query {
         Logical(Logical<T>),
     }
 
-    impl<T: Serialize> Parameter for LogicalParameter<T> {
+    impl<T: Parameter> Parameter for LogicalParameter<T> {
         fn to_bson(self) -> bson::Bson {
             let x = match self {
                 LogicalParameter::Logical(value) => value.to_bson(),
-                LogicalParameter::Value(value) => bson::ser::to_bson(&value)
-                    .unwrap()
-                    // .as_document()
-                    // .unwrap()
-                    .clone(),
+                LogicalParameter::Value(value) => value.to_bson(), // .unwrap()
+                                                                   // .as_document()
+                                                                   // .unwrap()
+                                                                   // .clone(),
             };
             x
         }
@@ -388,6 +412,21 @@ mod tests {
             number: Some(Comparison::Gt(BlockNumber(1))),
         };
 
+        // println!("{:?}", q1.to_bson());
+
         assert_eq!(q1.to_bson().to_string(), q2.to_bson().to_string());
+    }
+
+    #[test]
+    fn test_string() {
+        let x = "hello".to_string();
+        println!("{:?}", x.to_bson());
+
+        let x = 1.to_bson();
+        println!("{:?}", x);
+
+        let _x = 42;
+        let _x = 24;
+        println!("{:?}", _x);
     }
 }
